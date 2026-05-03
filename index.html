@@ -2,9 +2,8 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Estadísticas Convención</title>
+<title>Dashboard Convención JAS</title>
 
-<!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <!-- DataTables -->
@@ -16,34 +15,51 @@
 <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
 
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body {
-  font-family: Arial, sans-serif;
+  font-family: Arial;
   background: #0f172a;
   color: white;
   padding: 20px;
 }
 
-h2 {
+h1 {
   text-align: center;
+}
+
+/* KPIs */
+.kpis {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.kpi {
+  flex: 1;
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.kpi h2 {
+  margin: 0;
+  font-size: 28px;
+}
+
+canvas {
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 20px;
 }
 
 table {
   background: white;
   color: black;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.dataTables_wrapper .dataTables_filter input {
-  border-radius: 6px;
-  padding: 5px;
-}
-
-select {
-  width: 100%;
-  padding: 5px;
-  margin-top: 5px;
 }
 </style>
 
@@ -51,13 +67,17 @@ select {
 
 <body>
 
-<h2>📊 Estadísticas Convención JAS</h2>
+<h1>📊 Dashboard Convención JAS</h1>
 
-<table id="tabla" class="display" style="width:100%">
-  <thead>
-    <tr id="encabezado"></tr>
-  </thead>
-</table>
+<div class="kpis">
+  <div class="kpi"><h2 id="total">0</h2><p>Total</p></div>
+  <div class="kpi"><h2 id="hombres">0</h2><p>Hombres</p></div>
+  <div class="kpi"><h2 id="mujeres">0</h2><p>Mujeres</p></div>
+</div>
+
+<canvas id="grafica"></canvas>
+
+<table id="tabla" class="display" style="width:100%"></table>
 
 <script>
 fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQXEHin29Er8xAayRXtZyYo1B4BnzfTGtpjGfk9rGg9uf-GfJmxHTx4G8krTP4r6w254gUzkPFOI020/pub?gid=162119901&single=true&output=csv")
@@ -65,44 +85,50 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQXEHin29Er8xAayRXtZyYo1B
 .then(data => {
 
   const filas = data.trim().split("\n").map(f => f.split(","));
-  const encabezados = filas[0];
-  const cuerpo = filas.slice(1);
+  const headers = filas[0];
+  const body = filas.slice(1);
 
-  let headerRow = "";
-  encabezados.forEach(col => {
-    headerRow += `<th>${col}</th>`;
+  // KPI
+  document.getElementById("total").innerText = body.length;
+
+  let hombres = 0;
+  let mujeres = 0;
+
+  const generoIndex = headers.findIndex(h => h.toLowerCase().includes("sexo"));
+
+  body.forEach(row => {
+    if (row[generoIndex]?.toLowerCase() === "hombre") hombres++;
+    if (row[generoIndex]?.toLowerCase() === "mujer") mujeres++;
   });
-  document.getElementById("encabezado").innerHTML = headerRow;
 
-  const tabla = $('#tabla').DataTable({
-    data: cuerpo,
-    columns: encabezados.map(col => ({ title: col })),
+  document.getElementById("hombres").innerText = hombres;
+  document.getElementById("mujeres").innerText = mujeres;
+
+  // Gráfica
+  new Chart(document.getElementById("grafica"), {
+    type: 'bar',
+    data: {
+      labels: ['Hombres', 'Mujeres'],
+      datasets: [{
+        label: 'Participantes',
+        data: [hombres, mujeres]
+      }]
+    }
+  });
+
+  // Tabla
+  $('#tabla').DataTable({
+    data: body,
+    columns: headers.map(h => ({ title: h })),
     dom: 'Bfrtip',
-    buttons: ['copy', 'csv', 'excel', 'pdf'],
+    buttons: ['excel', 'pdf'],
     pageLength: 10,
     language: {
       search: "Buscar:",
-      lengthMenu: "Mostrar _MENU_ registros",
-      info: "Mostrando _START_ a _END_ de _TOTAL_",
       paginate: {
         next: "Siguiente",
         previous: "Anterior"
       }
-    },
-    initComplete: function () {
-      this.api().columns().every(function () {
-        let column = this;
-        let select = $('<select><option value="">Filtrar</option></select>')
-          .appendTo($(column.header()))
-          .on('change', function () {
-            let val = $.fn.dataTable.util.escapeRegex($(this).val());
-            column.search(val ? '^' + val + '$' : '', true, false).draw();
-          });
-
-        column.data().unique().sort().each(function (d) {
-          select.append('<option value="' + d + '">' + d + '</option>');
-        });
-      });
     }
   });
 
