@@ -30,7 +30,6 @@ h1 {
   text-align: center;
 }
 
-/* KPIs */
 .kpis {
   display: flex;
   gap: 15px;
@@ -51,7 +50,6 @@ h1 {
   font-size: 30px;
 }
 
-/* Gráfica */
 canvas {
   background: white;
   border-radius: 12px;
@@ -59,7 +57,6 @@ canvas {
   margin-bottom: 20px;
 }
 
-/* Tabla */
 table {
   background: white;
   color: black;
@@ -67,7 +64,6 @@ table {
   overflow: hidden;
 }
 
-/* Botones */
 .dt-button {
   background: white !important;
   color: #14532d !important;
@@ -82,14 +78,12 @@ table {
   background: #dcfce7 !important;
 }
 
-/* Buscador */
 .dataTables_filter input {
   border-radius: 8px;
   padding: 5px;
   border: none;
 }
 
-/* Select filtros */
 select {
   width: 100%;
   padding: 5px;
@@ -110,7 +104,11 @@ select {
   <div class="kpi"><h2 id="mujeres">0</h2><p>Mujeres</p></div>
 </div>
 
+<!-- Gráfica general -->
 <canvas id="grafica"></canvas>
+
+<!-- 🔥 Nueva gráfica por estaca -->
+<canvas id="graficaEstaca"></canvas>
 
 <table id="tabla" class="display" style="width:100%"></table>
 
@@ -123,23 +121,25 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQXEHin29Er8xAayRXtZyYo1B
   const headers = filas[0];
   const body = filas.slice(1);
 
-  // KPIs
+  // KPI
   document.getElementById("total").innerText = body.length;
 
   let hombres = 0;
   let mujeres = 0;
 
   const generoIndex = headers.findIndex(h => h.toLowerCase().includes("sexo"));
+  const estacaIndex = headers.findIndex(h => h.toLowerCase().includes("estaca"));
 
   body.forEach(row => {
-    if (row[generoIndex]?.toLowerCase() === "hombre") hombres++;
-    if (row[generoIndex]?.toLowerCase() === "mujer") mujeres++;
+    let genero = row[generoIndex]?.toLowerCase();
+    if (genero === "hombre") hombres++;
+    if (genero === "mujer") mujeres++;
   });
 
   document.getElementById("hombres").innerText = hombres;
   document.getElementById("mujeres").innerText = mujeres;
 
-  // Gráfica
+  // 📊 Gráfica general
   new Chart(document.getElementById("grafica"), {
     type: 'bar',
     data: {
@@ -151,7 +151,63 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQXEHin29Er8xAayRXtZyYo1B
     }
   });
 
-  // Tabla con filtros tipo Excel
+  // 🔥 Agrupar por estaca
+  let estacas = {};
+  let labels = [];
+
+  body.forEach(row => {
+    let estaca = row[estacaIndex] || "Sin dato";
+    let genero = row[generoIndex]?.toLowerCase();
+
+    if (!estacas[estaca]) {
+      estacas[estaca] = { hombres: 0, mujeres: 0 };
+      labels.push(estaca);
+    }
+
+    if (genero === "hombre") estacas[estaca].hombres++;
+    if (genero === "mujer") estacas[estaca].mujeres++;
+  });
+
+  const dataHombres = labels.map(e => estacas[e].hombres);
+  const dataMujeres = labels.map(e => estacas[e].mujeres);
+
+  // 📊 Gráfica por estaca
+  new Chart(document.getElementById("graficaEstaca"), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Hombres',
+          data: dataHombres,
+          backgroundColor: '#2563eb'
+        },
+        {
+          label: 'Mujeres',
+          data: dataMujeres,
+          backgroundColor: '#ec4899'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: 'white' }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: 'white' }
+        },
+        y: {
+          ticks: { color: 'white' }
+        }
+      }
+    }
+  });
+
+  // 📋 Tabla
   $('#tabla').DataTable({
     data: body,
     columns: headers.map(h => ({ title: h })),
