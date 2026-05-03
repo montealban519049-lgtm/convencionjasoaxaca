@@ -21,7 +21,7 @@
 <style>
 body {
   font-family: Arial;
-  background: #0f172a;
+  background: #14532d;
   color: white;
   padding: 20px;
 }
@@ -39,27 +39,62 @@ h1 {
 
 .kpi {
   flex: 1;
-  background: #1e293b;
+  background: #166534;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 12px;
   text-align: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
 .kpi h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 30px;
 }
 
+/* Gráfica */
 canvas {
   background: white;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px;
   margin-bottom: 20px;
 }
 
+/* Tabla */
 table {
   background: white;
   color: black;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Botones */
+.dt-button {
+  background: white !important;
+  color: #14532d !important;
+  border-radius: 8px !important;
+  border: none !important;
+  padding: 6px 12px !important;
+  margin-right: 5px !important;
+  font-weight: bold;
+}
+
+.dt-button:hover {
+  background: #dcfce7 !important;
+}
+
+/* Buscador */
+.dataTables_filter input {
+  border-radius: 8px;
+  padding: 5px;
+  border: none;
+}
+
+/* Select filtros */
+select {
+  width: 100%;
+  padding: 5px;
+  margin-top: 5px;
+  border-radius: 6px;
 }
 </style>
 
@@ -88,7 +123,7 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQXEHin29Er8xAayRXtZyYo1B
   const headers = filas[0];
   const body = filas.slice(1);
 
-  // KPI
+  // KPIs
   document.getElementById("total").innerText = body.length;
 
   let hombres = 0;
@@ -116,19 +151,36 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQXEHin29Er8xAayRXtZyYo1B
     }
   });
 
-  // Tabla
+  // Tabla con filtros tipo Excel
   $('#tabla').DataTable({
     data: body,
     columns: headers.map(h => ({ title: h })),
     dom: 'Bfrtip',
-    buttons: ['excel', 'pdf'],
-    pageLength: 10,
+    buttons: ['copy','csv','excel','pdf'],
+    pageLength: 100,
     language: {
       search: "Buscar:",
+      lengthMenu: "Mostrar _MENU_ registros",
+      info: "Mostrando _START_ a _END_ de _TOTAL_",
       paginate: {
         next: "Siguiente",
         previous: "Anterior"
       }
+    },
+    initComplete: function () {
+      this.api().columns().every(function () {
+        let column = this;
+        let select = $('<select><option value="">Filtrar</option></select>')
+          .appendTo($(column.header()))
+          .on('change', function () {
+            let val = $.fn.dataTable.util.escapeRegex($(this).val());
+            column.search(val ? '^' + val + '$' : '', true, false).draw();
+          });
+
+        column.data().unique().sort().each(function (d) {
+          select.append('<option value="' + d + '">' + d + '</option>');
+        });
+      });
     }
   });
 
