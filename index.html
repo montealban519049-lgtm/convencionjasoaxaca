@@ -13,28 +13,25 @@
 <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
 
+<!-- 🔥 NECESARIO PARA PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body { margin:0; font-family:Arial; background:#14532d; color:white; }
-
 .nav { display:flex; background:#064e3b; padding:10px; }
 .nav button { background:transparent; border:none; color:white; margin-right:10px; padding:10px; cursor:pointer; }
 .nav button.active { background:#166534; border-radius:8px; }
-
 .section { display:none; padding:20px; }
 .active-section { display:block; }
-
 .filtros { display:flex; gap:10px; margin-bottom:20px; }
 select { padding:8px; border-radius:8px; border:none; }
-
 .kpis { display:flex; gap:15px; margin-bottom:20px; }
 .kpi { flex:1; background:#166534; padding:20px; border-radius:12px; text-align:center; }
-
 canvas { background:white; border-radius:12px; margin-bottom:20px; }
-
 table { background:white; color:black; }
-
 .dt-button { background:white !important; color:#14532d !important; border-radius:8px !important; }
 </style>
 </head>
@@ -117,14 +114,10 @@ function actualizarBarrios(){
   let barrios = new Set();
 
   dataGlobal.forEach(row => {
-    if(row[colIndex]) {
-      barrios.add(row[colIndex]);
-    }
+    if(row[colIndex]) barrios.add(row[colIndex]);
   });
 
-  barrios.forEach(b => {
-    $('#filtroBarrio').append(`<option>${b}</option>`);
-  });
+  barrios.forEach(b => $('#filtroBarrio').append(`<option>${b}</option>`));
 }
 
 function filtrar(){
@@ -144,17 +137,15 @@ function filtrar(){
   }
 
   return dataGlobal.filter(row => {
+    const okEstaca = !estaca || row[estacaIndex] === estaca;
+    const okGenero = !genero || row[generoIndex] === genero;
 
-    const cumpleEstaca = !estaca || row[estacaIndex] === estaca;
-    const cumpleGenero = !genero || row[generoIndex] === genero;
-
-    let cumpleBarrio = true;
-
+    let okBarrio = true;
     if(barrio && barrioIndex !== -1){
-      cumpleBarrio = row[barrioIndex] === barrio;
+      okBarrio = row[barrioIndex] === barrio;
     }
 
-    return cumpleEstaca && cumpleBarrio && cumpleGenero;
+    return okEstaca && okBarrio && okGenero;
   });
 }
 
@@ -201,14 +192,22 @@ function actualizar(){
     data:datos,
     columns:headersGlobal.map(h=>({title:h})),
     dom:'Bfrtip',
-    buttons:['copy','csv','excel','pdf'],
+    buttons:[
+      'copy',
+      'csv',
+      'excel',
+      {
+        extend:'pdfHtml5',
+        text:'PDF',
+        orientation:'landscape',
+        pageSize:'A4'
+      }
+    ],
     pageLength:100
   });
 }
 
-$('#filtroEstaca').on('change',actualizar);
-$('#filtroBarrio').on('change',actualizar);
-$('#filtroGenero').on('change',actualizar);
+$('#filtroEstaca,#filtroBarrio,#filtroGenero').on('change',actualizar);
 
 $('.tab').click(function(){
   $('.tab').removeClass('active');
