@@ -1,50 +1,112 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Tabla con filtros</title>
+<title>Estadísticas Convención</title>
 
+<!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+<!-- DataTables -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+<!-- Buttons -->
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+  padding: 20px;
+}
+
+h2 {
+  text-align: center;
+}
+
+table {
+  background: white;
+  color: black;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  border-radius: 6px;
+  padding: 5px;
+}
+
+select {
+  width: 100%;
+  padding: 5px;
+  margin-top: 5px;
+}
+</style>
 
 </head>
 
 <body>
 
-<h2>Estadísticas Convención</h2>
+<h2>📊 Estadísticas Convención JAS</h2>
 
-<table id="tabla" class="display" style="width:100%"></table>
+<table id="tabla" class="display" style="width:100%">
+  <thead>
+    <tr id="encabezado"></tr>
+  </thead>
+</table>
 
 <script>
 fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQXEHin29Er8xAayRXtZyYo1B4BnzfTGtpjGfk9rGg9uf-GfJmxHTx4G8krTP4r6w254gUzkPFOI020/pub?gid=162119901&single=true&output=csv")
-  .then(res => res.text())
-  .then(data => {
+.then(res => res.text())
+.then(data => {
 
-    const filas = data.trim().split("\n").map(f => f.split(","));
+  const filas = data.trim().split("\n").map(f => f.split(","));
+  const encabezados = filas[0];
+  const cuerpo = filas.slice(1);
 
-    const encabezados = filas[0];
-    const cuerpo = filas.slice(1);
-
-    const columnas = encabezados.map(col => ({ title: col }));
-
-    $('#tabla').DataTable({
-      data: cuerpo,
-      columns: columnas,
-      pageLength: 10,
-      language: {
-        search: "Buscar:",
-        lengthMenu: "Mostrar _MENU_ registros",
-        info: "Mostrando _START_ a _END_ de _TOTAL_",
-        paginate: {
-          next: "Siguiente",
-          previous: "Anterior"
-        }
-      }
-    });
-
+  let headerRow = "";
+  encabezados.forEach(col => {
+    headerRow += `<th>${col}</th>`;
   });
+  document.getElementById("encabezado").innerHTML = headerRow;
+
+  const tabla = $('#tabla').DataTable({
+    data: cuerpo,
+    columns: encabezados.map(col => ({ title: col })),
+    dom: 'Bfrtip',
+    buttons: ['copy', 'csv', 'excel', 'pdf'],
+    pageLength: 10,
+    language: {
+      search: "Buscar:",
+      lengthMenu: "Mostrar _MENU_ registros",
+      info: "Mostrando _START_ a _END_ de _TOTAL_",
+      paginate: {
+        next: "Siguiente",
+        previous: "Anterior"
+      }
+    },
+    initComplete: function () {
+      this.api().columns().every(function () {
+        let column = this;
+        let select = $('<select><option value="">Filtrar</option></select>')
+          .appendTo($(column.header()))
+          .on('change', function () {
+            let val = $.fn.dataTable.util.escapeRegex($(this).val());
+            column.search(val ? '^' + val + '$' : '', true, false).draw();
+          });
+
+        column.data().unique().sort().each(function (d) {
+          select.append('<option value="' + d + '">' + d + '</option>');
+        });
+      });
+    }
+  });
+
+});
 </script>
 
 </body>
