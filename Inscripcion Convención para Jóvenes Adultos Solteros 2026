@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Tabla con filtros</title>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+</head>
+
+<body>
+
+<h2>Estadísticas Convención</h2>
+
+<table id="tabla" class="display" style="width:100%"></table>
+
+<script>
+fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQXEHin29Er8xAayRXtZyYo1B4BnzfTGtpjGfk9rGg9uf-GfJmxHTx4G8krTP4r6w254gUzkPFOI020/pub?gid=162119901&single=true&output=csv")
+  .then(res => res.text())
+  .then(data => {
+
+    const filas = data.trim().split("\n").map(f => f.split(","));
+
+    const encabezados = filas[0];
+    const cuerpo = filas.slice(1);
+
+    const columnas = encabezados.map(col => ({ title: col }));
+
+    $('#tabla').DataTable({
+      data: cuerpo,
+      columns: columnas,
+      pageLength: 10,
+      language: {
+        search: "Buscar:",
+        lengthMenu: "Mostrar _MENU_ registros",
+        info: "Mostrando _START_ a _END_ de _TOTAL_",
+        paginate: {
+          next: "Siguiente",
+          previous: "Anterior"
+        }
+      }
+    });
+
+  });
+</script>
+
+</body>
+</html>
