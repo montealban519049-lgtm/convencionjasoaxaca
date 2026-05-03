@@ -16,78 +16,26 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: #14532d;
-  color: white;
-}
+body { margin:0; font-family:Arial; background:#14532d; color:white; }
 
-.nav {
-  display: flex;
-  background: #064e3b;
-  padding: 10px;
-}
+.nav { display:flex; background:#064e3b; padding:10px; }
+.nav button { background:transparent; border:none; color:white; margin-right:10px; padding:10px; cursor:pointer; }
+.nav button.active { background:#166534; border-radius:8px; }
 
-.nav button {
-  background: transparent;
-  border: none;
-  color: white;
-  margin-right: 10px;
-  padding: 10px;
-  cursor: pointer;
-}
+.section { display:none; padding:20px; }
+.active-section { display:block; }
 
-.nav button.active {
-  background: #166534;
-  border-radius: 8px;
-}
+.filtros { display:flex; gap:10px; margin-bottom:20px; }
+select { padding:8px; border-radius:8px; border:none; }
 
-.section { display: none; padding: 20px; }
-.active-section { display: block; }
+.kpis { display:flex; gap:15px; margin-bottom:20px; }
+.kpi { flex:1; background:#166534; padding:20px; border-radius:12px; text-align:center; }
 
-.filtros {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
+canvas { background:white; border-radius:12px; margin-bottom:20px; }
 
-select {
-  padding: 8px;
-  border-radius: 8px;
-  border: none;
-}
+table { background:white; color:black; }
 
-.kpis {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.kpi {
-  flex: 1;
-  background: #166534;
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-canvas {
-  background: white;
-  border-radius: 12px;
-  margin-bottom: 20px;
-}
-
-table {
-  background: white;
-  color: black;
-}
-
-.dt-button {
-  background: white !important;
-  color: #14532d !important;
-  border-radius: 8px !important;
-}
+.dt-button { background:white !important; color:#14532d !important; border-radius:8px !important; }
 </style>
 </head>
 
@@ -140,47 +88,74 @@ function idx(nombre){
 }
 
 function llenarFiltros(){
-  const e=idx("estaca"), b=idx("barrio"), g=idx("sexo");
+  const e=idx("estaca"), g=idx("sexo");
 
-  let estacas=new Set(), barrios=new Set(), generos=new Set();
+  let estacas=new Set(), generos=new Set();
 
   dataGlobal.forEach(r=>{
     estacas.add(r[e]);
-    barrios.add(r[b]);
     generos.add(r[g]);
   });
 
   estacas.forEach(v=>$('#filtroEstaca').append(`<option>${v}</option>`));
-  barrios.forEach(v=>$('#filtroBarrio').append(`<option>${v}</option>`));
   generos.forEach(v=>$('#filtroGenero').append(`<option>${v}</option>`));
 }
 
 function actualizarBarrios(){
-  const eSel=$('#filtroEstaca').val();
-  const e=idx("estaca"), b=idx("barrio");
-
-  let barrios=new Set();
-
-  dataGlobal.forEach(r=>{
-    if(!eSel || r[e]===eSel) barrios.add(r[b]);
-  });
+  const estacaSeleccionada = $('#filtroEstaca').val();
 
   $('#filtroBarrio').html('<option value="">Todos los Barrios</option>');
-  barrios.forEach(v=>$('#filtroBarrio').append(`<option>${v}</option>`));
+
+  if(!estacaSeleccionada) return;
+
+  const colIndex = headersGlobal.findIndex(h => 
+    h.toLowerCase().trim() === estacaSeleccionada.toLowerCase().trim()
+  );
+
+  if(colIndex === -1) return;
+
+  let barrios = new Set();
+
+  dataGlobal.forEach(row => {
+    if(row[colIndex]) {
+      barrios.add(row[colIndex]);
+    }
+  });
+
+  barrios.forEach(b => {
+    $('#filtroBarrio').append(`<option>${b}</option>`);
+  });
 }
 
 function filtrar(){
-  const eSel=$('#filtroEstaca').val();
-  const bSel=$('#filtroBarrio').val();
-  const gSel=$('#filtroGenero').val();
+  const estaca = $('#filtroEstaca').val();
+  const barrio = $('#filtroBarrio').val();
+  const genero = $('#filtroGenero').val();
 
-  const e=idx("estaca"), b=idx("barrio"), g=idx("sexo");
+  const estacaIndex = idx("estaca");
+  const generoIndex = idx("sexo");
 
-  return dataGlobal.filter(r=>
-    (!eSel || r[e]===eSel) &&
-    (!bSel || r[b]===bSel) &&
-    (!gSel || r[g]===gSel)
-  );
+  let barrioIndex = -1;
+
+  if(estaca){
+    barrioIndex = headersGlobal.findIndex(h =>
+      h.toLowerCase().trim() === estaca.toLowerCase().trim()
+    );
+  }
+
+  return dataGlobal.filter(row => {
+
+    const cumpleEstaca = !estaca || row[estacaIndex] === estaca;
+    const cumpleGenero = !genero || row[generoIndex] === genero;
+
+    let cumpleBarrio = true;
+
+    if(barrio && barrioIndex !== -1){
+      cumpleBarrio = row[barrioIndex] === barrio;
+    }
+
+    return cumpleEstaca && cumpleBarrio && cumpleGenero;
+  });
 }
 
 function actualizar(){
