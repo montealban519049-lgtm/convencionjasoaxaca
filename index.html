@@ -23,7 +23,6 @@ body {
   color: white;
 }
 
-/* NAV */
 .nav {
   display: flex;
   background: #064e3b;
@@ -44,17 +43,9 @@ body {
   border-radius: 8px;
 }
 
-/* CONTENIDO */
-.section {
-  display: none;
-  padding: 20px;
-}
+.section { display: none; padding: 20px; }
+.active-section { display: block; }
 
-.active-section {
-  display: block;
-}
-
-/* FILTROS */
 .filtros {
   display: flex;
   gap: 10px;
@@ -67,7 +58,6 @@ select {
   border: none;
 }
 
-/* KPIs */
 .kpis {
   display: flex;
   gap: 15px;
@@ -82,20 +72,17 @@ select {
   text-align: center;
 }
 
-/* GRAFICAS */
 canvas {
   background: white;
   border-radius: 12px;
   margin-bottom: 20px;
 }
 
-/* TABLA */
 table {
   background: white;
   color: black;
 }
 
-/* BOTONES */
 .dt-button {
   background: white !important;
   color: #14532d !important;
@@ -106,17 +93,16 @@ table {
 
 <body>
 
-<!-- 🧭 NAV -->
 <div class="nav">
   <button class="tab active" data-tab="dashboard">📊 Dashboard</button>
   <button class="tab" data-tab="tabla">📋 Datos</button>
 </div>
 
-<!-- 📊 DASHBOARD -->
 <div id="dashboard" class="section active-section">
 
 <div class="filtros">
   <select id="filtroEstaca"><option value="">Todas las Estacas</option></select>
+  <select id="filtroBarrio"><option value="">Todos los Barrios</option></select>
   <select id="filtroGenero"><option value="">Todos los Géneros</option></select>
 </div>
 
@@ -126,93 +112,113 @@ table {
   <div class="kpi"><h2 id="mujeres">0</h2><p>Mujeres</p></div>
 </div>
 
-<canvas id="grafica"></canvas>
 <canvas id="graficaEstaca"></canvas>
 
 </div>
 
-<!-- 📋 TABLA -->
 <div id="tabla" class="section">
   <table id="tablaData" class="display" style="width:100%"></table>
 </div>
 
 <script>
-let dataGlobal = [], headersGlobal = [];
-let chart1, chart2, tabla;
+let dataGlobal=[], headersGlobal=[];
+let chart, tabla;
 
 fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQXEHin29Er8xAayRXtZyYo1B4BnzfTGtpjGfk9rGg9uf-GfJmxHTx4G8krTP4r6w254gUzkPFOI020/pub?gid=162119901&single=true&output=csv")
-.then(res => res.text())
-.then(data => {
-  const filas = data.trim().split("\n").map(f => f.split(","));
-  headersGlobal = filas[0];
-  dataGlobal = filas.slice(1);
+.then(res=>res.text())
+.then(data=>{
+  const filas=data.trim().split("\n").map(f=>f.split(","));
+  headersGlobal=filas[0];
+  dataGlobal=filas.slice(1);
 
   llenarFiltros();
-  actualizarTodo();
+  actualizar();
 });
 
-function llenarFiltros() {
-  const eIdx = headersGlobal.findIndex(h=>h.toLowerCase().includes("estaca"));
-  const gIdx = headersGlobal.findIndex(h=>h.toLowerCase().includes("sexo"));
-
-  let estacas = new Set(), generos = new Set();
-
-  dataGlobal.forEach(r=>{
-    estacas.add(r[eIdx]);
-    generos.add(r[gIdx]);
-  });
-
-  estacas.forEach(e=>$('#filtroEstaca').append(`<option>${e}</option>`));
-  generos.forEach(g=>$('#filtroGenero').append(`<option>${g}</option>`));
+function idx(nombre){
+  return headersGlobal.findIndex(h=>h.toLowerCase().includes(nombre));
 }
 
-function filtrar() {
-  const e = $('#filtroEstaca').val();
-  const g = $('#filtroGenero').val();
+function llenarFiltros(){
+  const e=idx("estaca"), b=idx("barrio"), g=idx("sexo");
 
-  const eIdx = headersGlobal.findIndex(h=>h.toLowerCase().includes("estaca"));
-  const gIdx = headersGlobal.findIndex(h=>h.toLowerCase().includes("sexo"));
+  let estacas=new Set(), barrios=new Set(), generos=new Set();
 
-  return dataGlobal.filter(r =>
-    (!e || r[eIdx]===e) &&
-    (!g || r[gIdx]===g)
+  dataGlobal.forEach(r=>{
+    estacas.add(r[e]);
+    barrios.add(r[b]);
+    generos.add(r[g]);
+  });
+
+  estacas.forEach(v=>$('#filtroEstaca').append(`<option>${v}</option>`));
+  barrios.forEach(v=>$('#filtroBarrio').append(`<option>${v}</option>`));
+  generos.forEach(v=>$('#filtroGenero').append(`<option>${v}</option>`));
+}
+
+function actualizarBarrios(){
+  const eSel=$('#filtroEstaca').val();
+  const e=idx("estaca"), b=idx("barrio");
+
+  let barrios=new Set();
+
+  dataGlobal.forEach(r=>{
+    if(!eSel || r[e]===eSel) barrios.add(r[b]);
+  });
+
+  $('#filtroBarrio').html('<option value="">Todos los Barrios</option>');
+  barrios.forEach(v=>$('#filtroBarrio').append(`<option>${v}</option>`));
+}
+
+function filtrar(){
+  const eSel=$('#filtroEstaca').val();
+  const bSel=$('#filtroBarrio').val();
+  const gSel=$('#filtroGenero').val();
+
+  const e=idx("estaca"), b=idx("barrio"), g=idx("sexo");
+
+  return dataGlobal.filter(r=>
+    (!eSel || r[e]===eSel) &&
+    (!bSel || r[b]===bSel) &&
+    (!gSel || r[g]===gSel)
   );
 }
 
-function actualizarTodo() {
-  const datos = filtrar();
-  const gIdx = headersGlobal.findIndex(h=>h.toLowerCase().includes("sexo"));
-  const eIdx = headersGlobal.findIndex(h=>h.toLowerCase().includes("estaca"));
+function actualizar(){
+  actualizarBarrios();
+
+  const datos=filtrar();
+  const g=idx("sexo"), e=idx("estaca");
 
   let h=0,m=0;
   datos.forEach(r=>{
-    if(r[gIdx]?.toLowerCase()==="hombre") h++;
-    if(r[gIdx]?.toLowerCase()==="mujer") m++;
+    if(r[g]?.toLowerCase()==="hombre") h++;
+    if(r[g]?.toLowerCase()==="mujer") m++;
   });
 
   total.innerText=datos.length;
   hombres.innerText=h;
   mujeres.innerText=m;
 
-  if(chart1) chart1.destroy();
-  chart1=new Chart(grafica,{type:'bar',data:{labels:['H','M'],datasets:[{data:[h,m]}]}});
-
   let estacas={};
   datos.forEach(r=>{
-    let est=r[eIdx]||"Sin dato";
+    let est=r[e]||"Sin dato";
     if(!estacas[est]) estacas[est]={h:0,m:0};
-    if(r[gIdx]==="Hombre") estacas[est].h++;
-    if(r[gIdx]==="Mujer") estacas[est].m++;
+
+    if(r[g]?.toLowerCase()==="hombre") estacas[est].h++;
+    if(r[g]?.toLowerCase()==="mujer") estacas[est].m++;
   });
 
   let labels=Object.keys(estacas);
-  let dh=labels.map(e=>estacas[e].h);
-  let dm=labels.map(e=>estacas[e].m);
+  let dh=labels.map(x=>estacas[x].h);
+  let dm=labels.map(x=>estacas[x].m);
 
-  if(chart2) chart2.destroy();
-  chart2=new Chart(graficaEstaca,{
+  if(chart) chart.destroy();
+  chart=new Chart(graficaEstaca,{
     type:'bar',
-    data:{labels,datasets:[{label:'Hombres',data:dh},{label:'Mujeres',data:dm}]}
+    data:{labels,datasets:[
+      {label:'Hombres',data:dh},
+      {label:'Mujeres',data:dm}
+    ]}
   });
 
   if(tabla) tabla.destroy();
@@ -225,9 +231,10 @@ function actualizarTodo() {
   });
 }
 
-$('#filtroEstaca,#filtroGenero').on('change',actualizarTodo);
+$('#filtroEstaca').on('change',actualizar);
+$('#filtroBarrio').on('change',actualizar);
+$('#filtroGenero').on('change',actualizar);
 
-// navegación
 $('.tab').click(function(){
   $('.tab').removeClass('active');
   $(this).addClass('active');
